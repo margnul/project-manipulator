@@ -1,0 +1,53 @@
+@use 'helpers' as *;
+
+:root {
+  --color-white: #FFFFFF;
+  --color-black: #000000;
+
+  --color-light: #FDF9F2;
+  --color-accent: #ADC7A8;
+  --color-accent-darker: #71866d;
+  --color-brown-dark: #4F4B43;
+  --color-brown-light: #A49B8A;
+  --color-cream: #F9EBD2;
+  --color-cream-darker: #d1c4ad;
+
+  --color-mid-gray: #888888;
+
+  --gradient: linear-gradient(45deg,
+      var(--color-brown-dark) 65%,
+      var(--color-brown-light) 135%);
+  --border: #{rem(1)} solid var(--color-brown-dark);
+
+  --shadow: 0 0 0 #{rem(3)} #191919;
+
+  --font-family-base: 'SN Pro', sans-serif;
+  --font-family-accent: 'SN Pro', sans-serif;
+
+  --transition-duration: 0.2s;
+
+  @include laptop {
+    --container-width: #{rem(1280)};
+  }
+
+  --left-panel-width: 12.5%;
+  --container-width: calc(100% - var(--left-panel-width));
+  --container-padding-x: #{rem(16)};
+  --container-padding-x: clamp(8px, 1vw, 32px);
+
+  --header-height: 12.5%;
+
+  --console-width: 20%;
+  --console-color: #383838;
+
+  --desk-item-size: 32px;
+  --desk-item-size: 10%;
+  --desk-item-gap: calc((100% - var(--desk-item-size)*8) / 9);
+
+  --cell-rows: 8;
+  --cell-colunms: 8;
+  --cell-height: calc(100% / (var(--cell-rows) + 1));
+  --cell-width: calc(100% / (var(--cell-colunms) + 1));
+  --cell-row-gap: calc(var(--cell-height) / (var(--cell-rows) + 1));
+  --cell-column-gap: calc(var(--cell-width) / (var(--cell-colunms) + 1));
+}

@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manipulator Board Control</title>
+    <style>
+        :root {
+            --bg-top: #f7f1e6;
+            --bg-bottom: #d7e4ec;
+            --card: #ffffff;
+            --text-main: #13293d;
+            --text-muted: #546a7b;
+            --line: #d6dde3;
+            --board-dark: #335c67;
+            --board-light: #fff3e6;
+            --accent-source: #ff6f3c;
+            --accent-target: #0d6efd;
+            --accent-ok: #2a9d8f;
+            --accent-err: #d62828;
+            --shadow: 0 16px 30px rgba(19, 41, 61, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            color: var(--text-main);
+            background: linear-gradient(160deg, var(--bg-top), var(--bg-bottom));
+            padding: 24px;
+        }
+
+        .layout {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: grid;
+            gap: 16px;
+        }
+
+        .panel {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            padding: 18px;
+        }
+
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.45rem;
+            letter-spacing: 0.03em;
+        }
+
+        .ws-line {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .ws-state {
+            font-weight: 700;
+        }
+
+        .ws-state.ok {
+            color: var(--accent-ok);
+        }
+
+        .ws-state.err {
+            color: var(--accent-err);
+        }
+
+        .boards {
+            display: grid;
+            gap: 16px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .board-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(8, minmax(32px, 1fr));
+            gap: 4px;
+        }
+
+        .cell {
+            aspect-ratio: 1 / 1;
+            border: 1px solid rgba(19, 41, 61, 0.18);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 120ms ease, box-shadow 120ms ease;
+        }
+
+        .cell:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 12px rgba(19, 41, 61, 0.2);
+        }
+
+        .cell.light {
+            background: var(--board-light);
+        }
+
+        .cell.dark {
+            background: var(--board-dark);
+            color: #f5f9fc;
+        }
+
+        .cell .notation {
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .cell .number {
+            font-size: 0.7rem;
+            opacity: 0.9;
+        }
+
+        .cell.source {
+            outline: 3px solid var(--accent-source);
+            z-index: 1;
+        }
+
+        .cell.target {
+            outline: 3px solid var(--accent-target);
+            z-index: 1;
+        }
+
+        .controls {
+            display: grid;
+            gap: 14px;
+        }
+
+        .control-line {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-muted);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: #f8fafc;
+            color: var(--text-main);
+            padding: 5px 10px;
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 10px;
+            padding: 9px 14px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #0b6e4f;
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: #e9f1f7;
+            color: #213547;
+        }
+
+        .btn-primary:disabled {
+            cursor: not-allowed;
+            opacity: 0.4;
+        }
+
+        .log {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            min-height: 82px;
+            max-height: 220px;
+            overflow: auto;
+            padding: 10px;
+            background: #fbfdff;
+            font-size: 0.87rem;
+        }
+
+        .log-row {
+            margin: 0 0 7px 0;
+        }
+
+        .log-row.ok {
+            color: var(--accent-ok);
+        }
+
+        .log-row.err {
+            color: var(--accent-err);
+        }
+
+        @media (max-width: 980px) {
+            body {
+                padding: 12px;
+            }
+
+            .boards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="layout">
+        <section class="panel header">
+            <h1>Manipulator Board Control</h1>
+            <div class="ws-line">
+                WebSocket:
+                <span id="ws-state" class="ws-state err">connecting</span>
+            </div>
+        </section>
+
+        <section class="boards">
+            <article class="panel">
+                <div class="board-title">
+                    <span>Board 1</span>
+                    <span class="badge">Target by default</span>
+                </div>
+                <div id="board-1" class="board-grid"></div>
+            </article>
+
+            <article class="panel">
+                <div class="board-title">
+                    <span>Board 2</span>
+                    <span class="badge">Source by default</span>
+                </div>
+                <div id="board-2" class="board-grid"></div>
+            </article>
+        </section>
+
+        <section class="panel controls">
+            <div class="control-line">
+                Direction:
+                <span class="badge">Board <span id="direction-from">2</span> -> Board <span id="direction-to">1</span></span>
+                <span class="badge">A1 = 1 ... H8 = 64</span>
+            </div>
+            <div class="control-line">
+                Source:
+                <span id="source-label" class="badge">not selected</span>
+                Target:
+                <span id="target-label" class="badge">not selected</span>
+            </div>
+            <div class="buttons">
+                <button id="send-move" class="btn-primary" disabled>Send Move</button>
+                <button id="swap" class="btn-secondary" type="button">Swap Direction</button>
+                <button id="reset" class="btn-secondary" type="button">Clear Selection</button>
+            </div>
+            <div id="log" class="log"></div>
+        </section>
+    </main>
+
+    <script>
+        (() => {
+            const FILES = ["A", "B", "C", "D", "E", "F", "G", "H"];
+
+            const state = {
+                boardFrom: 2,
+                boardTo: 1,
+                sourcePos: null,
+                targetPos: null,
+                sourceCell: null,
+                targetCell: null,
+                socket: null,
+                connected: false
+            };
+
+            const wsStateElement = document.getElementById("ws-state");
+            const boardOneRoot = document.getElementById("board-1");
+            const boardTwoRoot = document.getElementById("board-2");
+            const sourceLabel = document.getElementById("source-label");
+            const targetLabel = document.getElementById("target-label");
+            const sendButton = document.getElementById("send-move");
+            const swapButton = document.getElementById("swap");
+            const resetButton = document.getElementById("reset");
+            const directionFrom = document.getElementById("direction-from");
+            const directionTo = document.getElementById("direction-to");
+            const logRoot = document.getElementById("log");
+
+            function indexToNotation(index) {
+                const file = FILES[(index - 1) % 8];
+                const rank = Math.floor((index - 1) / 8) + 1;
+                return `${file}${rank}`;
+            }
+
+            function setSocketState(isConnected, text) {
+                state.connected = isConnected;
+                wsStateElement.textContent = text;
+                wsStateElement.classList.toggle("ok", isConnected);
+                wsStateElement.classList.toggle("err", !isConnected);
+                updateSendButton();
+            }
+
+            function log(message, level = "info") {
+                const row = document.createElement("p");
+                row.className = `log-row ${level === "error" ? "err" : level === "ok" ? "ok" : ""}`.trim();
+                row.textContent = `${new Date().toLocaleTimeString()}  ${message}`;
+                logRoot.prepend(row);
+            }
+
+            function clearSelection() {
+                if (state.sourceCell) {
+                    state.sourceCell.classList.remove("source");
+                }
+                if (state.targetCell) {
+                    state.targetCell.classList.remove("target");
+                }
+                state.sourcePos = null;
+                state.targetPos = null;
+                state.sourceCell = null;
+                state.targetCell = null;
+                updateSelectionLabels();
+                updateSendButton();
+            }
+
+            function updateSelectionLabels() {
+                sourceLabel.textContent = state.sourcePos ? `${indexToNotation(state.sourcePos)} (${state.sourcePos})` : "not selected";
+                targetLabel.textContent = state.targetPos ? `${indexToNotation(state.targetPos)} (${state.targetPos})` : "not selected";
+            }
+
+            function updateSendButton() {
+                sendButton.disabled = !state.connected || !state.sourcePos || !state.targetPos;
+            }
+
+            function setSource(pos, cell) {
+                if (state.sourceCell) {
+                    state.sourceCell.classList.remove("source");
+                }
+                state.sourcePos = pos;
+                state.sourceCell = cell;
+                state.sourceCell.classList.add("source");
+                updateSelectionLabels();
+                updateSendButton();
+            }
+
+            function setTarget(pos, cell) {
+                if (state.targetCell) {
+                    state.targetCell.classList.remove("target");
+                }
+                state.targetPos = pos;
+                state.targetCell = cell;
+                state.targetCell.classList.add("target");
+                updateSelectionLabels();
+                updateSendButton();
+            }
+
+            function buildBoard(root, boardId) {
+                for (let rank = 8; rank >= 1; rank -= 1) {
+                    for (let file = 1; file <= 8; file += 1) {
+                        const pos = (rank - 1) * 8 + file;
+                        const cell = document.createElement("button");
+                        const notation = `${FILES[file - 1]}${rank}`;
+                        const isLight = (rank + file) % 2 === 0;
+                        cell.type = "button";
+                        cell.className = `cell ${isLight ? "light" : "dark"}`;
+                        cell.dataset.boardId = String(boardId);
+                        cell.dataset.pos = String(pos);
+                        cell.innerHTML = `<span class="notation">${notation}</span><span class="number">${pos}</span>`;
+                        cell.addEventListener("click", () => {
+                            if (boardId === state.boardFrom) {
+                                setSource(pos, cell);
+                                log(`Source selected: board ${boardId}, ${notation} (${pos})`);
+                                return;
+                            }
+                            if (boardId === state.boardTo) {
+                                setTarget(pos, cell);
+                                log(`Target selected: board ${boardId}, ${notation} (${pos})`);
+                                return;
+                            }
+                            log(`Board ${boardId} is not active for current direction`, "error");
+                        });
+                        root.appendChild(cell);
+                    }
+                }
+            }
+
+            function connectWebSocket() {
+                const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+                const url = `${protocol}://${window.location.host}/ws/move/`;
+                state.socket = new WebSocket(url);
+                setSocketState(false, "connecting");
+
+                state.socket.addEventListener("open", () => {
+                    setSocketState(true, "connected");
+                    log("WebSocket connected", "ok");
+                });
+
+                state.socket.addEventListener("close", () => {
+                    setSocketState(false, "disconnected");
+                    log("WebSocket disconnected. Reconnecting in 2s...", "error");
+                    window.setTimeout(connectWebSocket, 2000);
+                });
+
+                state.socket.addEventListener("error", () => {
+                    setSocketState(false, "error");
+                    log("WebSocket error", "error");
+                });
+
+                state.socket.addEventListener("message", (event) => {
+                    let payload;
+                    try {
+                        payload = JSON.parse(event.data);
+                    } catch (error) {
+                        log(`Invalid message from server: ${event.data}`, "error");
+                        return;
+                    }
+
+                    if (payload.type === "move_result") {
+                        if (payload.ok) {
+                            log(`Move sent: ${payload.command}. Response: ${payload.response || "empty"}`, "ok");
+                        } else {
+                            log(`Move failed: ${payload.error || "unknown error"}`, "error");
+                        }
+                        return;
+                    }
+
+                    if (payload.type === "error") {
+                        log(`Server validation error: ${payload.message}`, "error");
+                        return;
+                    }
+
+                    if (payload.type === "connection") {
+                        log(payload.message, "ok");
+                    }
+                });
+            }
+
+            function updateDirectionBadges() {
+                directionFrom.textContent = String(state.boardFrom);
+                directionTo.textContent = String(state.boardTo);
+            }
+
+            sendButton.addEventListener("click", () => {
+                if (!state.socket || state.socket.readyState !== WebSocket.OPEN) {
+                    log("WebSocket is not connected", "error");
+                    return;
+                }
+
+                const payload = {
+                    action: "move",
+                    board_from: state.boardFrom,
+                    pos_from: state.sourcePos,
+                    board_to: state.boardTo,
+                    pos_to: state.targetPos
+                };
+
+                state.socket.send(JSON.stringify(payload));
+                log(
+                    `Move request: board ${payload.board_from} (${indexToNotation(payload.pos_from)} / ${payload.pos_from}) -> board ${payload.board_to} (${indexToNotation(payload.pos_to)} / ${payload.pos_to})`
+                );
+            });
+
+            swapButton.addEventListener("click", () => {
+                const oldFrom = state.boardFrom;
+                state.boardFrom = state.boardTo;
+                state.boardTo = oldFrom;
+                updateDirectionBadges();
+                clearSelection();
+                log(`Direction switched: board ${state.boardFrom} -> board ${state.boardTo}`);
+            });
+
+            resetButton.addEventListener("click", () => {
+                clearSelection();
+                log("Selection cleared");
+            });
+
+            buildBoard(boardOneRoot, 1);
+            buildBoard(boardTwoRoot, 2);
+            updateDirectionBadges();
+            updateSelectionLabels();
+            connectWebSocket();
+        })();
+    </script>
+</body>
+</html>

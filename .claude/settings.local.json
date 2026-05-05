@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python manage.py runserver 8000)",
+      "Bash(python -m http.server 3000)",
+      "Bash(curl -s http://127.0.0.1:8000/)",
+      "Bash(curl -s -X POST http://127.0.0.1:8000/api/chess/new)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :8000)",
+      "Bash(findstr LISTENING)",
+      "Bash(taskkill /PID 20316 /F)",
+      "Bash(cmd //c \"taskkill /PID 20316 /F\")",
+      "Bash(python manage.py runserver 8080)",
+      "Bash(curl -s -X POST http://127.0.0.1:8080/api/chess/new)",
+      "Bash(curl -s http://localhost:3000/)"
+    ]
+  }
+}

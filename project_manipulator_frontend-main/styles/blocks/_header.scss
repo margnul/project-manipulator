@@ -1,0 +1,83 @@
+@use '../helpers/' as *;
+
+.header {
+  height: 100%;
+  width: 100%;
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+
+  &__title{
+    font-size: clamp(2.5rem, 5vw, 96px);
+
+    &-wrapper{
+      height: max-content;
+      width: max-content;
+    }
+  }
+
+  &__web-controls{
+    width: max-content;
+    width: clamp(6rem, 20vw, 9rem);;
+    height: max-content;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    row-gap: 8px;
+
+    --indicator-size: #{rem(12)};
+    --indicator-gap-right: #{rem(10)};
+    --indicator-gap-mid: #{rem(10)};
+    --indicator-gap-left: calc((1.5rem - var(--indicator-size)) / 2);
+
+    &-connection-tile{
+      width: max-content;
+      //width: 9rem;
+      height: auto; 
+      padding-left: calc(var(--indicator-size) + var(--indicator-gap-left) + var(--indicator-gap-mid));
+      padding-right: var(--indicator-gap-right);
+      position: relative;
+      background-color: #4F4B4344;
+      color: var(--color-black);
+      font-size: clamp(.7rem, 2vw, 1.2rem);
+      font-weight: 500;
+      text-align: end;
+      border-radius: 1000px;
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      &::before{
+        width: var(--indicator-size);
+        height: var(--indicator-size);
+        position: absolute;
+        left: var(--indicator-gap-left);
+        top: 50%;
+        transform: translateY(-50%);
+        background-color: #ff0000;
+        border-radius: 50%;
+        content: "";
+      }
+    }
+
+    &-console-button{
+      width: 100%;
+      background-color: var(--color-brown-dark);
+      color: var(--color-white);
+      font-size: clamp(1rem, 2.5vw, 1.5 rem);;
+      padding-bottom: 3px;
+      border-radius: 1000px;
+      transition-duration: .1s;
+
+      @include hover{
+        width: 104%;
+        padding-top: 5px;
+        padding-bottom: 7px;
+      }
+    }
+  }
+}

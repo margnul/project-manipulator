@@ -1,0 +1,13 @@
+@use 'normalize';
+@use 'fonts';
+@use 'variables';
+@use 'utils';
+@use 'globals';
+
+@use './blocks/screen';
+@use './blocks/header';
+@use './blocks/left-panel';
+@use './blocks/desk';
+@use './blocks/controls';
+@use './blocks/moving-panel';
+@use './blocks/console';
