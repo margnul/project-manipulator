@@ -21,6 +21,8 @@ def send_move_command(
     timeout: float = 5.0,
 ) -> MoveCommandResult:
     command = f"Move,{board_from},{pos_from},{board_to},{pos_to}\r\n"
+    
+    print(f"[DEBUG КОНТРОЛЛЕР] Отправка команды: {command.strip()}")
 
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:

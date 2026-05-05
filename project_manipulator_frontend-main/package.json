@@ -1,0 +1,14 @@
+{
+  "name": "manipulator-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for manipulator project",
+  "scripts": {
+    "dev": "parcel index.html --port 3000",
+    "build": "parcel build index.html",
+    "watch-css": "sass --watch styles/main.scss:styles/main.css"
+  },
+  "devDependencies": {
+    "parcel": "^2.12.0",
+    "sass": "^1.72.0"
+  }
+}

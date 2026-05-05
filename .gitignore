@@ -1,0 +1,18 @@
+# Frontend (Parcel & Node)
+node_modules/
+.parcel-cache/
+dist/
+.env
+
+# Backend (Python & Django)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+db.sqlite3
+.DS_Store
+
+# IDE и прочее
+.vscode/
+.idea/

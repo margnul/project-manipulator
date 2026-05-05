@@ -2,6 +2,7 @@ import json
 import re
 import uuid
 from typing import Any, Dict, Tuple
+import time
 
 from django.conf import settings
 from django.http import JsonResponse
@@ -45,6 +46,65 @@ def _init_board2_default():
 
 # Инициализируем доску 2 при запуске
 _board2_state = _init_board2_default()
+
+def _sync_physical_board_to_start():
+    """Сравнивает текущую доску с начальной и расставляет фигуры манипулятором"""
+    global _board1_state, _board2_state
+    
+    target_state = _init_board2_default()
+    
+    print("[DEBUG RESET] Начинаем расстановку фигур для новой игры...")
+    
+    # Простой алгоритм: 
+    # 1. Убрать все фигуры, которые стоят неправильно, на Доску 1 (кладбище)
+    # 2. Переместить нужные фигуры с Доски 1 на правильные места на Доске 2
+    
+    # Шаг 1: Очищаем неправильные фигуры
+    correct_positions = {(p['row'], p['col']): p for p in target_state}
+    pieces_to_remove = []
+    
+    for piece in _board2_state:
+        pos = (piece['row'], piece['col'])
+        # Если на этом месте должна стоять другая фигура или пусто - убираем
+        if pos not in correct_positions or correct_positions[pos]['type'] != piece['type'] or correct_positions[pos]['color'] != piece['color']:
+            pieces_to_remove.append(piece)
+
+    for piece in pieces_to_remove:
+        pos_from = piece['row'] * 8 + piece['col'] + 1
+        # Ищем свободное место на Доске 1 (просто берем первую свободную клетку от 1 до 64)
+        occupied_b1 = {p['row'] * 8 + p['col'] + 1 for p in _board1_state}
+        pos_to = next(i for i in range(1, 65) if i not in occupied_b1)
+        
+        send_move_command(settings.MANIPULATOR_TCP_HOST, settings.MANIPULATOR_TCP_PORT, 2, pos_from, 1, pos_to)
+        
+        # Обновляем состояние
+        _board2_state.remove(piece)
+        piece['row'] = (pos_to - 1) // 8
+        piece['col'] = (pos_to - 1) % 8
+        _board1_state.append(piece)
+        time.sleep(1) # Небольшая пауза для манипулятора
+
+    # Шаг 2: Расставляем недостающие фигуры из Доски 1
+    current_positions = {(p['row'], p['col']): p for p in _board2_state}
+    
+    for pos, target_piece in correct_positions.items():
+        if pos not in current_positions:
+            # Ищем такую фигуру на Доске 1
+            found_piece = next((p for p in _board1_state if p['type'] == target_piece['type'] and p['color'] == target_piece['color']), None)
+            
+            if found_piece:
+                pos_from = found_piece['row'] * 8 + found_piece['col'] + 1
+                pos_to = target_piece['row'] * 8 + target_piece['col'] + 1
+                
+                send_move_command(settings.MANIPULATOR_TCP_HOST, settings.MANIPULATOR_TCP_PORT, 1, pos_from, 2, pos_to)
+                
+                _board1_state.remove(found_piece)
+                _board2_state.append(target_piece)
+                time.sleep(1)
+            else:
+                print(f"[DEBUG RESET] ВНИМАНИЕ: Фигура {target_piece['color']} {target_piece['type']} не найдена на кладбище (Доска 1)!")
+
+    print("[DEBUG RESET] Расстановка завершена.")
 
 
 def index(request):
@@ -157,9 +217,12 @@ def chess_new(request):
     if request.method == 'OPTIONS':
         return _cors(JsonResponse({}))
 
+    # ДОБАВЛЕНО: Расставляем фигуры физически
+    _sync_physical_board_to_start()
+
     game = ChessGame()
 
-    # Инициализируем доску 2 из сохраненного состояния (физическая доска)
+    # Инициализируем виртуальную доску из нового состояния физической доски
     if _board2_state:
         game.board._squares = [[None] * 8 for _ in range(8)]
         for piece_data in _board2_state:

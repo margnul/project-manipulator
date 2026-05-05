@@ -11,10 +11,8 @@ const SYMBOLS = {
 
 class Chess extends GameBase {
 
-  // ─── GameBase обязательные ────────────────────────────────────────
-
   initDesks() {
-    this.deskCount   = 1
+    this.deskCount   = 1 // Строго одна доска
     this.deskColumns = 8
     this.deskRows    = 8
   }
@@ -30,38 +28,22 @@ class Chess extends GameBase {
     this.uciHistory    = []
     this.capturedWhite = []
     this.capturedBlack = []
-    this._panelEl      = null   // создаётся в _buildUI
 
     this._injectCSS()
     this._buildUI()
     this._createGame()
   }
 
-  // ─── Активация / деактивация ──────────────────────────────────────
-
   activateGame() {
     super.activateGame()
-    // Включаем chess-layout в .desks только когда шахматы видны
-    Object.assign(this.desks.style, {
-      display:        'flex',
-      flexDirection:  'row',
-      alignItems:     'center',
-      justifyContent: 'center',
-      gap:            '20px',
-      padding:        '12px',
-      boxSizing:      'border-box',
-      overflow:       'hidden',
-    })
-    if (this._panelEl) this._panelEl.style.display = 'flex'
-    // Загружаем состояние доски 2 с бэка
+    const ctrl = document.querySelector('.controls')
+    if (ctrl) ctrl.style.display = 'none'
+
     this._loadBoardStateFromBackend()
   }
 
   deactivateGame() {
     super.deactivateGame()
-    // Сбрасываем ВСЕ inline-стили — CSS файл сам восстановит нужные значения
-    this.desks.style.cssText = ''
-    if (this._panelEl) this._panelEl.style.display = 'none'
   }
 
   async gameLogic(row, column) {
@@ -82,8 +64,6 @@ class Chess extends GameBase {
 
   onCommandSent() {}
 
-  // ─── Сеть ─────────────────────────────────────────────────────────
-
   async _createGame() {
     try {
       const res  = await fetch(`${BACKEND}/api/chess/new`, { method: 'POST' })
@@ -97,9 +77,7 @@ class Chess extends GameBase {
     try {
       const res = await fetch(`${BACKEND}/api/chess/boards`)
       const data = await res.json()
-      if (data.ok) {
-        console.log('Состояние доски 2 загружено с бэка')
-      }
+      if (data.ok) console.log('Состояние доски 2 загружено с бэка')
     } catch (e) {
       console.error('Ошибка загрузки состояния доски:', e)
     }
@@ -144,8 +122,6 @@ class Chess extends GameBase {
     this._render()
   }
 
-  // ─── Состояние ────────────────────────────────────────────────────
-
   _applyState(state) {
     this.piecesState  = state.pieces
     this.turnState    = state.turn
@@ -172,8 +148,6 @@ class Chess extends GameBase {
       (moving.color === 'white' ? this.capturedWhite : this.capturedBlack).push('pawn')
     }
   }
-
-  // ─── Отрисовка доски ──────────────────────────────────────────────
 
   _render() {
     for (let row = 0; row < 8; row++) {
@@ -209,8 +183,6 @@ class Chess extends GameBase {
   _cell(row, col) {
     return this.desk[0].cells[(this.deskRows - 1 - row) * this.deskColumns + col]
   }
-
-  // ─── Панель ───────────────────────────────────────────────────────
 
   _updatePanel() {
     const isWhite = this.turnState === 'white'
@@ -251,8 +223,6 @@ class Chess extends GameBase {
       .join(' ')
   }
 
-  // ─── Промоушн-диалог ──────────────────────────────────────────────
-
   _askPromotion() {
     return new Promise(resolve => {
       const overlay = document.createElement('div')
@@ -272,8 +242,6 @@ class Chess extends GameBase {
       )
     })
   }
-
-  // ─── Финальный модал ──────────────────────────────────────────────
 
   _showModal(state) {
     const isCheckmate = state.status === 'checkmate'
@@ -301,19 +269,6 @@ class Chess extends GameBase {
     await this._createGame()
   }
 
-  // ─── Физическая доска ────────────────────────────────────────────
-
-  async _loadPhysicalBoard() {
-    try {
-      const res = await fetch(`${BACKEND}/api/chess/physical-board`)
-      const data = await res.json()
-      return data.pieces || []
-    } catch (e) {
-      console.error('Ошибка загрузки физической доски:', e)
-      return []
-    }
-  }
-
   async _savePhysicalBoard(pieces) {
     try {
       const res = await fetch(`${BACKEND}/api/chess/update-physical-board`, {
@@ -324,7 +279,6 @@ class Chess extends GameBase {
       const data = await res.json()
       return data.ok
     } catch (e) {
-      console.error('Ошибка сохранения физической доски:', e)
       return false
     }
   }
@@ -333,30 +287,25 @@ class Chess extends GameBase {
     const overlay = document.createElement('div')
     overlay.className = 'chess-editor-overlay'
     const self = this
-
     let editingPieces = []
 
     const buildEditor = () => {
       const board = document.createElement('div')
       board.className = 'chess-editor-board'
-
       for (let row = 7; row >= 0; row--) {
         for (let col = 0; col < 8; col++) {
           const cell = document.createElement('div')
           cell.className = 'chess-editor-cell'
           cell.style.backgroundColor = (row + col) % 2 === 0 ? '#f0d9b5' : '#b58863'
-
           const piece = editingPieces.find(p => p.row === row && p.col === col)
           if (piece) {
             cell.textContent = SYMBOLS[piece.color][piece.type]
             cell.classList.add('chess-editor-piece')
           }
-
           cell.addEventListener('click', () => _showPieceMenu(row, col, piece, cell))
           board.appendChild(cell)
         }
       }
-
       return board
     }
 
@@ -380,30 +329,20 @@ class Chess extends GameBase {
           `).join('')}
         </div>
       `
-
       menu.querySelector('[data-action="remove"]').addEventListener('click', () => {
         editingPieces = editingPieces.filter(p => !(p.row === row && p.col === col))
-        boardContainer.innerHTML = ''
-        boardContainer.appendChild(buildEditor())
+        boardContainer.innerHTML = ''; boardContainer.appendChild(buildEditor())
         document.body.removeChild(menu)
       })
-
       menu.querySelectorAll('.chess-editor-piece-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-          const r = parseInt(e.target.dataset.row)
-          const c = parseInt(e.target.dataset.col)
-          const color = e.target.dataset.color
-          const type = e.target.dataset.type
-
+          const r = parseInt(e.target.dataset.row), c = parseInt(e.target.dataset.col)
           editingPieces = editingPieces.filter(p => !(p.row === r && p.col === c))
-          editingPieces.push({ row: r, col: c, color, type })
-
-          boardContainer.innerHTML = ''
-          boardContainer.appendChild(buildEditor())
+          editingPieces.push({ row: r, col: c, color: e.target.dataset.color, type: e.target.dataset.type })
+          boardContainer.innerHTML = ''; boardContainer.appendChild(buildEditor())
           document.body.removeChild(menu)
         })
       })
-
       document.body.appendChild(menu)
     }
 
@@ -423,21 +362,14 @@ class Chess extends GameBase {
         </div>
       </div>
     `
-
-    const body = overlay.querySelector('#chess-editor-body')
-    body.appendChild(boardContainer)
-
+    overlay.querySelector('#chess-editor-body').appendChild(boardContainer)
     overlay.querySelector('#chess-editor-close').addEventListener('click', () => document.body.removeChild(overlay))
     overlay.querySelector('#chess-editor-cancel').addEventListener('click', () => document.body.removeChild(overlay))
     overlay.querySelector('#chess-editor-save').addEventListener('click', async () => {
       const saved = await self._savePhysicalBoard(editingPieces)
-      if (saved) {
-        document.body.removeChild(overlay)
-      } else {
-        alert('Ошибка сохранения')
-      }
+      if (saved) document.body.removeChild(overlay)
+      else alert('Ошибка сохранения')
     })
-
     document.body.appendChild(overlay)
   }
 
@@ -448,27 +380,26 @@ class Chess extends GameBase {
     return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'><text x='22' y='36' font-size='32' text-anchor='middle' fill='${fill}' stroke='${strk}' stroke-width='1.2' paint-order='stroke' font-family='serif'>${sym}</text></svg>`
   }
 
-  // ─── UI-сборка ────────────────────────────────────────────────────
-
   _buildUI() {
-    // Скрываем кнопку MOVE
-    setTimeout(() => {
-      const ctrl = document.querySelector('.controls')
-      if (ctrl) ctrl.style.display = 'none'
-    }, 0)
-
-    // Класс для переопределения стилей доски
     this.gameScreen.classList.add('chess-mode')
 
-    // Файловая нотация под доской
+    const boardContainer = document.createElement('div')
+    boardContainer.className = 'chess-board-wrapper'
+
+    const deskWrapper = this.gameScreen.querySelector('.desk__wrapper')
+    if (deskWrapper) {
+      boardContainer.appendChild(deskWrapper)
+    }
+
     const filesBar = document.createElement('div')
     filesBar.className = 'cp-files'
     FILES.forEach(f => {
       const s = document.createElement('span'); s.textContent = f; filesBar.appendChild(s)
     })
-    this.gameScreen.appendChild(filesBar)
+    boardContainer.appendChild(filesBar)
+    
+    this.gameScreen.appendChild(boardContainer)
 
-    // Боковая панель
     const panel = document.createElement('div')
     this._panelEl = panel
     panel.className = 'cp-panel'
@@ -496,31 +427,45 @@ class Chess extends GameBase {
       <button class="cp-new-btn" id="cp-new-btn">↺ Новая партия</button>
       <button class="cp-new-btn" id="cp-edit-board-btn" style="background: #5c5c7a;">⚙ Редакт. доску</button>
     `
-    this.desks.appendChild(panel)
+    this.gameScreen.appendChild(panel)
+
     document.getElementById('cp-new-btn').addEventListener('click', () => this._newGame())
     document.getElementById('cp-edit-board-btn').addEventListener('click', () => this._showPhysicalBoardEditor())
   }
-
-  // ─── CSS ──────────────────────────────────────────────────────────
 
   _injectCSS() {
     if (document.getElementById('chess-styles')) return
     const s = document.createElement('style')
     s.id = 'chess-styles'
     s.textContent = `
-      /* ── Board overrides ─────────────────── */
       .chess-mode {
-        flex-direction: column !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 4px !important;
+        gap: 40px !important;
+        width: 100% !important;
+        height: 100% !important;
+      }
+      .chess-board-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        /* Максимальная ширина: все свободное место (минус панель 320px), но высота не больше 75vh */
+        width: min(calc(100% - 320px), 75vh) !important;
+        min-width: 280px;
+      }
+
+      /* Математически выверенная адаптивная доска */
+      .chess-board-wrapper .desk__wrapper {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 1 / 1 !important;
         flex: 0 0 auto !important;
-        width: auto !important;
+        container-type: inline-size;
       }
-      .chess-mode .desk__wrapper {
-        width: min(100%, min(65vh, 520px)) !important;
-        height: min(100%, min(65vh, 520px)) !important;
-      }
+
       .chess-mode .desk__cells {
         gap: 0 !important;
         padding: 6px !important;
@@ -542,8 +487,7 @@ class Chess extends GameBase {
 
       /* ── Move indicators ─────────────────── */
       .chess-dot::after {
-        content: ''; position: absolute;
-        width: 30%; height: 30%;
+        content: ''; position: absolute; width: 30%; height: 30%;
         background: rgba(0,0,0,.22); border-radius: 50%;
         top: 50%; left: 50%; transform: translate(-50%,-50%);
         z-index: 10; pointer-events: none;
@@ -553,81 +497,60 @@ class Chess extends GameBase {
         border: 4px solid rgba(0,0,0,.28); border-radius: 3px;
         z-index: 10; pointer-events: none;
       }
-      .chess-check {
-        background: radial-gradient(circle, #ff6b6b 0%, #c00 80%) !important;
-      }
+      .chess-check { background: radial-gradient(circle, #ff6b6b 0%, #c00 80%) !important; }
 
-      /* ── Files ───────────────────────────── */
       .cp-files {
-        display: flex;
-        width: min(100%, min(65vh, 520px));
+        display: flex; width: 100%;
         padding: 0 6px; box-sizing: border-box;
       }
       .cp-files span {
-        flex: 1; text-align: center;
-        font-size: 11px; font-weight: 700;
+        flex: 1; text-align: center; font-size: 14px; font-weight: 700;
         color: #8b7355; letter-spacing: .05em; user-select: none;
       }
 
-      /* ── Side panel ──────────────────────── */
       .cp-panel {
-        width: 185px; flex-shrink: 0;
-        display: flex; flex-direction: column; gap: 10px;
-        align-self: stretch;
+        width: 260px; flex-shrink: 0;
+        display: flex; flex-direction: column; gap: 14px;
+        align-self: center;
       }
 
       .cp-player {
-        background: #fff; border-radius: 12px;
-        padding: 11px 14px;
-        display: flex; align-items: center; gap: 10px;
-        border: 2px solid transparent;
-        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        background: #fff; border-radius: 12px; padding: 14px 18px;
+        display: flex; align-items: center; gap: 12px;
+        border: 2px solid transparent; box-shadow: 0 4px 12px rgba(0,0,0,.08);
         transition: border-color .2s, box-shadow .2s;
       }
-      .cp-player.cp-active {
-        border-color: #7bc67e;
-        box-shadow: 0 2px 14px rgba(123,198,126,.35);
-      }
-      .cp-piece { font-size: 26px; line-height: 1; user-select: none; }
+      .cp-player.cp-active { border-color: #7bc67e; box-shadow: 0 2px 14px rgba(123,198,126,.35); }
+      .cp-piece { font-size: 32px; line-height: 1; user-select: none; }
       .cp-info  { flex: 1; overflow: hidden; }
-      .cp-name  { font-weight: 700; font-size: 13px; color: #2c2c2c; }
-      .cp-cap   { font-size: 11px; color: #888; margin-top: 2px; min-height: 14px; }
-      .cp-indicator { font-size: 11px; font-weight: 700; color: #7bc67e; white-space: nowrap; }
+      .cp-name  { font-weight: 700; font-size: 15px; color: #2c2c2c; }
+      .cp-cap   { font-size: 13px; color: #888; margin-top: 2px; min-height: 16px; }
+      .cp-indicator { font-size: 13px; font-weight: 700; color: #7bc67e; white-space: nowrap; }
 
       .cp-history-wrap {
-        flex: 1; background: #fff; border-radius: 12px;
-        padding: 11px 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,.08);
-        display: flex; flex-direction: column;
-        min-height: 80px; overflow: hidden;
+        flex: 1; background: #fff; border-radius: 12px; padding: 14px 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,.08); display: flex; flex-direction: column;
+        min-height: 120px; overflow: hidden; max-height: 250px;
       }
       .cp-hist-header {
-        font-size: 10px; font-weight: 700;
-        text-transform: uppercase; letter-spacing: .08em;
-        color: #bbb; margin-bottom: 8px;
+        font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+        color: #bbb; margin-bottom: 10px;
       }
       .cp-history {
-        flex: 1; overflow-y: auto;
-        display: flex; flex-direction: column; gap: 2px;
-        scrollbar-width: thin;
+        flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; scrollbar-width: thin;
       }
-      .cp-hist-row {
-        display: grid; grid-template-columns: 22px 1fr 1fr;
-        gap: 4px; font-size: 12px; font-family: monospace; align-items: baseline;
-      }
+      .cp-hist-row { display: grid; grid-template-columns: 26px 1fr 1fr; gap: 6px; font-size: 14px; font-family: monospace; align-items: baseline; }
       .cp-hist-num { color: #ccc; }
       .cp-hist-row span { color: #555; }
       .cp-hist-row:last-child span { font-weight: 700; color: #222; }
 
       .cp-new-btn {
-        background: #5c7a5c; color: #fff; border: none;
-        border-radius: 10px; padding: 10px;
-        font-size: 13px; font-weight: 700; cursor: pointer;
-        transition: background .15s; width: 100%;
+        background: #5c7a5c; color: #fff; border: none; border-radius: 10px; padding: 14px;
+        font-size: 15px; font-weight: 700; cursor: pointer; transition: background .15s; width: 100%;
       }
       .cp-new-btn:hover { background: #4a6a4a; }
 
-      /* ── Modals ──────────────────────────── */
+      /* Modals */
       .chess-modal-overlay {
         position: fixed; inset: 0; background: rgba(0,0,0,.6);
         display: flex; align-items: center; justify-content: center;
@@ -645,8 +568,7 @@ class Chess extends GameBase {
       .chess-modal-btn {
         background: #5c7a5c; color: #fff; border: none;
         border-radius: 12px; padding: 13px 30px;
-        font-size: 15px; font-weight: 700; cursor: pointer;
-        transition: background .15s;
+        font-size: 15px; font-weight: 700; cursor: pointer; transition: background .15s;
       }
       .chess-modal-btn:hover { background: #4a6a4a; }
 
@@ -657,96 +579,51 @@ class Chess extends GameBase {
       }
       .chess-promo-btn:hover { background: #e8f5e9; border-color: #7bc67e; transform: scale(1.1); }
 
-      /* ── Editor ──────────────────────────── */
+      /* Editor */
       .chess-editor-overlay {
         position: fixed; inset: 0; background: rgba(0,0,0,.6);
         display: flex; align-items: center; justify-content: center;
         z-index: 3000; backdrop-filter: blur(4px);
       }
       .chess-editor-modal {
-        background: #fff; border-radius: 20px;
-        width: 90%; max-width: 600px;
-        display: flex; flex-direction: column;
-        max-height: 90vh; overflow: hidden;
+        background: #fff; border-radius: 20px; width: 90%; max-width: 600px;
+        display: flex; flex-direction: column; max-height: 90vh; overflow: hidden;
         box-shadow: 0 24px 64px rgba(0,0,0,.35);
       }
       .chess-editor-modal-header {
-        padding: 20px; border-bottom: 1px solid #eee;
-        display: flex; justify-content: space-between; align-items: center;
+        padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;
       }
       .chess-editor-modal-header h2 { margin: 0; font-size: 20px; }
       .chess-editor-close {
-        background: none; border: none; font-size: 28px;
-        cursor: pointer; color: #999; transition: color .2s;
+        background: none; border: none; font-size: 28px; cursor: pointer; color: #999; transition: color .2s;
       }
       .chess-editor-close:hover { color: #333; }
       .chess-editor-modal-body {
-        padding: 20px; overflow-y: auto; flex: 1;
-        display: flex; justify-content: center;
+        padding: 20px; overflow-y: auto; flex: 1; display: flex; justify-content: center;
       }
       .chess-editor-board {
-        display: grid; grid-template-columns: repeat(8, 1fr);
-        gap: 0; background: #3d2410; padding: 6px; border-radius: 6px;
-        box-shadow: 0 0 0 2px #5c3a20;
+        display: grid; grid-template-columns: repeat(8, 1fr); gap: 0; background: #3d2410; padding: 6px; border-radius: 6px; box-shadow: 0 0 0 2px #5c3a20;
+        container-type: inline-size;
       }
       .chess-editor-cell {
-        aspect-ratio: 1; display: flex; align-items: center;
-        justify-content: center; position: relative;
-        border-radius: 3px; cursor: pointer;
-        font-size: 32px; user-select: none;
-        transition: filter .1s;
+        aspect-ratio: 1; display: flex; align-items: center; justify-content: center; position: relative; border-radius: 3px; cursor: pointer; font-size: 10cqw; user-select: none; transition: filter .1s;
       }
       .chess-editor-cell:hover { filter: brightness(1.18); }
       .chess-editor-menu {
-        position: fixed; background: #fff; border-radius: 12px;
-        padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.3);
-        z-index: 3001; min-width: 250px;
-        animation: chess-pop .2s cubic-bezier(.34,1.56,.64,1);
+        position: fixed; background: #fff; border-radius: 12px; padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.3); z-index: 3001; min-width: 250px; animation: chess-pop .2s cubic-bezier(.34,1.56,.64,1);
       }
-      .chess-editor-menu-title {
-        font-weight: 700; margin-bottom: 8px; padding-bottom: 8px;
-        border-bottom: 1px solid #eee; font-size: 12px;
-      }
-      .chess-editor-menu-btn {
-        display: block; width: 100%; background: #f5f5f5;
-        border: 1px solid #ddd; border-radius: 6px; padding: 8px;
-        cursor: pointer; font-size: 12px; margin-bottom: 8px;
-        transition: background .15s;
-      }
+      .chess-editor-menu-title { font-weight: 700; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #eee; font-size: 12px; }
+      .chess-editor-menu-btn { display: block; width: 100%; background: #f5f5f5; border: 1px solid #ddd; border-radius: 6px; padding: 8px; cursor: pointer; font-size: 12px; margin-bottom: 8px; transition: background .15s; }
       .chess-editor-menu-btn:hover { background: #efefef; }
-      .chess-editor-color-group {
-        margin-bottom: 10px;
-      }
-      .chess-editor-color-label {
-        font-size: 11px; font-weight: 700; color: #888;
-        text-transform: uppercase; letter-spacing: .05em;
-        margin-bottom: 6px;
-      }
-      .chess-editor-piece-btn {
-        background: #f5f5f5; border: 1px solid #ddd;
-        border-radius: 6px; padding: 6px; cursor: pointer;
-        font-size: 20px; margin-right: 4px; margin-bottom: 4px;
-        transition: all .12s; display: inline-block;
-      }
-      .chess-editor-piece-btn:hover {
-        background: #e8f5e9; border-color: #7bc67e; transform: scale(1.15);
-      }
-      .chess-editor-modal-footer {
-        padding: 16px; border-top: 1px solid #eee;
-        display: flex; gap: 12px; justify-content: flex-end;
-      }
-      .chess-editor-btn {
-        border: none; border-radius: 8px; padding: 10px 20px;
-        font-size: 14px; font-weight: 700; cursor: pointer;
-        transition: background .15s;
-      }
-      .chess-editor-cancel {
-        background: #f5f5f5; color: #333;
-      }
+      .chess-editor-color-group { margin-bottom: 10px; }
+      .chess-editor-color-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+      .chess-editor-piece-btn { background: #f5f5f5; border: 1px solid #ddd; border-radius: 6px; padding: 6px; cursor: pointer; font-size: 20px; margin-right: 4px; margin-bottom: 4px; transition: all .12s; display: inline-block; }
+      .chess-editor-piece-btn:hover { background: #e8f5e9; border-color: #7bc67e; transform: scale(1.15); }
+      .chess-editor-modal-footer { padding: 16px; border-top: 1px solid #eee; display: flex; gap: 12px; justify-content: flex-end; }
+      .chess-editor-btn { border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background .15s; }
+      .chess-editor-cancel { background: #f5f5f5; color: #333; }
       .chess-editor-cancel:hover { background: #efefef; }
-      .chess-editor-save {
-        background: #5c7a5c; color: #fff;
-      }
+      .chess-editor-save { background: #5c7a5c; color: #fff; }
       .chess-editor-save:hover { background: #4a6a4a; }
     `
     document.head.appendChild(s)
